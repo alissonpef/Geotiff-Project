@@ -1,0 +1,36 @@
+{
+  "dependencies": {
+    "express": "^5.1.0",
+    "geotiff": "^2.1.4-beta.0",
+    "global-mercator": "^3.1.0",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.7.2",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "name": "project-teste",
+  "version": "1.0.0",
+  "description": "API REST TypeScript para servir tiles de GeoTIFF com suporte a múltiplos arquivos, cache inteligente e visualização VARI",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": ["geotiff", "tiles", "vari", "typescript", "express", "rest-api", "maps"],
+  "author": "GlobalDrones",
+  "license": "ISC"
+}
