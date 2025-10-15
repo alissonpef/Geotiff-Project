@@ -1,45 +1,43 @@
-# Project Teste — API GeoTIFF Tiles (TypeScript)
+# GeoTIFF Tiles Test Project (TypeScript)
 
-API REST em TypeScript para servir tiles 256x256 a partir de arquivos GeoTIFF, com cache simples, cálculo de índice VARI e endpoints para gerenciamento dos GeoTIFFs.
+REST API in TypeScript to serve 256x256 tiles from GeoTIFF files, with a simple cache, VARI index calculation and endpoints to manage GeoTIFFs.
 
-## Tecnologias e bibliotecas
+## Technologies and libraries
 
-- Linguagens e runtime
+- Languages and runtime
   - TypeScript (ES2022, strict)
-  - Node.js (módulos ES, "type": "module")
+  - Node.js (ES modules, "type": "module")
 
-- Frameworks e libs principais
-  - express: servidor HTTP e roteamento
-  - geotiff: leitura e acesso a rasters de arquivos GeoTIFF
-  - sharp: processamento e codificação de imagens (PNG/JPEG/WebP)
-  - global-mercator: utilitários para conversão de tiles (Z/X/Y) em bounding boxes WGS84
+- Main frameworks and libs
+  - express: HTTP server and routing
+  - geotiff: reading and access to rasters in GeoTIFF files
+  - sharp: image processing and encoding (PNG/JPEG/WebP)
+  - global-mercator: utilities to convert tiles (Z/X/Y) to WGS84 bounding boxes
 
-- Testes
-  - jest + ts-jest: testes unitários e de integração
-  - supertest: testes HTTP dos endpoints
+- Testing
+  - jest + ts-jest: unit and integration tests
+  - supertest: HTTP endpoint tests
 
-- Ferramentas de desenvolvimento
-  - tsx: executar TypeScript sem build
+- Development tools
+  - tsx: run TypeScript without building
   - typescript, @types/*
 
-## Estrutura do projeto
+## Project structure
 
 ```
 src/
-  index.ts                 # bootstrap do servidor (rotas de demonstração)
-  config/                  # configuração centralizada (porta, diretórios, cache, CORS)
-  controllers/             # controladores para GeoTIFFs e tiles
-  routes/                  # rotas REST (tile, vari, geotiffs, health)
-  services/                # lógica de negócio (GeoTiffManager, TileService)
-  types/                   # tipos compartilhados
-  utils/                   # utilitários (tile bbox, VARI)
+  index.ts                 # server bootstrap (demo routes)
+  config/                  # centralized configuration (port, directories, cache, CORS)
+  controllers/             # controllers for GeoTIFFs and tiles
+  routes/                  # REST routes (tile, vari, geotiffs, health)
+  services/                # business logic (GeoTiffManager, TileService)
+  types/                   # shared types
+  utils/                   # utilities (tile bbox, VARI)
 data/
-  odm_orthophoto.tif      # exemplo de GeoTIFF
+  odm_orthophoto.tif      # example GeoTIFF
 tests/
-  *.test.ts                # testes com jest
+  *.test.ts                # jest tests
 ```
-
-Observação: O `src/index.ts` presente é um bootstrap simples com rotas demonstrativas (`/tile/:z/:x/:y`, `/vari/:z/:x/:y`, páginas HTML). As rotas REST completas estão sob `src/routes` e podem ser registradas via `registerRoutes` caso você queira usar a API modularizada.
 
 ## Endpoints principais
 
@@ -47,10 +45,10 @@ Observação: O `src/index.ts` presente é um bootstrap simples com rotas demons
   - GET `/health`
 
 - Gerenciamento de GeoTIFFs (`src/routes/geotiffRoutes.ts`)
-  - GET `/geotiffs` — lista arquivos .tif/.tiff no diretório de dados
-  - GET `/geotiffs/loaded` — lista arquivos carregados em cache
-  - POST `/geotiffs/load` — body: `{ idOrPath: string }` — carrega no cache
-  - DELETE `/geotiffs/:id` — remove do cache
+  - GET `/geotiffs` — list .tif/.tiff files in the data directory
+  - GET `/geotiffs/loaded` — list files currently loaded in cache
+  - POST `/geotiffs/load` — body: `{ idOrPath: string }` — load into cache
+  - DELETE `/geotiffs/:id` — remove from cache
 
 - Tiles RGB (`src/routes/tileRoutes.ts`)
   - GET `/tile/:tiffId/:z/:x/:y` — tile 256x256 PNG (ou outros formatos futuramente)
@@ -58,60 +56,55 @@ Observação: O `src/index.ts` presente é um bootstrap simples com rotas demons
 - Tiles VARI (`src/routes/variRoutes.ts`)
   - GET `/vari/:tiffId/:z/:x/:y` — tile 256x256 PNG com colormap baseado em VARI
 
-Notas:
-- O `tiffId` pode ser um nome de arquivo presente em `DATA_DIR` (com ou sem extensão) ou um path absoluto.
-- A conversão de Z/X/Y para BBOX WGS84 usa `global-mercator`.
-- O VARI é calculado como `(G - R) / (G + R - B)`; a saída é mapeada para uma escala de cores simples (vermelho → amarelo → verde).
+Notes:
+- The `tiffId` can be a filename present in `DATA_DIR` (with or without extension) or an absolute path.
+- Z/X/Y to WGS84 BBOX conversion uses `global-mercator`.
+- VARI is calculated as `(G - R) / (G + R - B)`; output is mapped to a simple color scale (red → yellow → green).
 
-## Requisitos
+## Configuration
 
-- Node.js 18+ (recomendado) — necessário para `sharp` e ESM
-- Dependências nativas do `sharp` (as prebuilds costumam funcionar em Linux)
+Environment variables (see `.env.example`):
 
-## Configuração
+- PORT: server port (default 3001)
+- DATA_DIR: directory where GeoTIFFs live (default `./data`)
+- MEDIA_DIR, TEMP_DIR: auxiliary directories (optional)
+- MAX_CACHE_SIZE_MB: cache size limit in MB (default 2048 in code)
+- CACHE_AGE_MINUTES: cache cleanup time in minutes (default 60)
+- TILE_SIZE: tile size (default 256)
+- MAX_ZOOM: maximum zoom supported (default 22)
+- CORS_ORIGIN: allowed origin (default `*`)
 
-Variáveis de ambiente (veja `.env.example`):
+Create a `.env` file at the project root to override defaults if desired.
 
-- PORT: porta do servidor (padrão 3001)
-- DATA_DIR: diretório onde ficam os GeoTIFFs (padrão `./data`)
-- MEDIA_DIR, TEMP_DIR: diretórios auxiliares (opcionais)
-- MAX_CACHE_SIZE_MB: limite de cache em MB (padrão 2048 no código)
-- CACHE_AGE_MINUTES: tempo para limpeza do cache em minutos (padrão 60)
-- TILE_SIZE: tamanho do tile (padrão 256)
-- MAX_ZOOM: zoom máximo suportado (padrão 22)
-- CORS_ORIGIN: origem permitida (padrão `*`)
+## Installation
 
-Crie um arquivo `.env` na raiz para sobrescrever os padrões, se desejar.
-
-## Instalação
-
-1) Instale as dependências
+1) Install dependencies
 
 ```bash
 npm install
 ```
 
-2) Garanta que haja pelo menos um arquivo `.tif` dentro do diretório apontado por `DATA_DIR` (padrão `./data`). Exemplo: `data/odm_orthophoto.tif`.
+2) Ensure there is at least one `.tif` file in the directory pointed by `DATA_DIR` (default `./data`). Example: `data/odm_orthophoto.tif`.
 
-## Execução
+## Run
 
-- Desenvolvimento (hot-reload via tsx):
+- Development (hot-reload via tsx):
 
 ```bash
 npm run dev
 ```
 
-- Execução direta (sem watch):
+- Run (no watch):
 
 ```bash
 npm start
 ```
 
-Por padrão o servidor sobe em `http://localhost:3001`.
+By default the server starts at `http://localhost:3001`.
 
-## Testes
+## Tests
 
-Rodar todos os testes:
+Run all tests:
 
 ```bash
 npm test
@@ -123,21 +116,15 @@ Watch mode:
 npm run test:watch
 ```
 
-Cobertura:
+Coverage:
 
 ```bash
 npm run test:coverage
 ```
 
-Os testes cobrem:
-- Geração/validação de tiles 256x256 com `sharp`
-- Cálculo e normalização do VARI
-- Conversões de tiles Web Mercator
-- Endpoints REST (via `supertest`)
+## How it works (technical summary)
 
-## Como funciona (resumo técnico)
-
-- `GeoTiffManager` carrega arquivos GeoTIFF e mantém um cache simples em memória, com limpeza periódica baseada em tempo.
-- `TileService` lê rasters (R,G,B) por bounding box de acordo com Z/X/Y e gera tiles RGB ou VARI, codificando com `sharp`.
-- `tileUtils.getTileBBoxWGS84` converte Z/X/Y → [minLon, minLat, maxLon, maxLat] em WGS84 usando `global-mercator`.
-- O colormap do VARI mapeia valores para RGB de forma simples: vermelho (baixo) → amarelo (médio) → verde (alto).
+- `GeoTiffManager` loads GeoTIFF files and keeps a simple in-memory cache with periodic time-based cleanup.
+- `TileService` reads rasters (R,G,B) for a bounding box based on Z/X/Y and generates RGB or VARI tiles, encoding them with `sharp`.
+- `tileUtils.getTileBBoxWGS84` converts Z/X/Y → [minLon, minLat, maxLon, maxLat] in WGS84 using `global-mercator`.
+- The VARI colormap maps values to RGB in a simple way: red (low) → yellow (medium) → green (high).
