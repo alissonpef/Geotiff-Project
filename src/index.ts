@@ -1,65 +1,39 @@
-import express, { type Request, type Response } from 'express';
-import path from 'path';
-import { loadTiff } from './tiffLoader.js';
-import { handleTileRequest, handleDebugTileRequest } from './tileHandler.js';
-import { handleVariRequest } from './variHandler.js'; 
+import express from 'express';
+import { registerRoutes } from './routes/index.js';
+
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
 const app = express();
-const PORT = 3001;
 
-async function startServer() {
-    console.log("Iniciando a API GeoTIFF REST em TypeScript...");
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
 
-    try {
-        // Tenta carregar o GeoTIFF no boot da aplicação
-        await loadTiff();
-        console.log("✅ GeoTIFF e primeira imagem carregados com sucesso!");
-    } catch (error) {
-        console.error("❌ ERRO FATAL na inicialização do GeoTIFF:", (error as Error).message);
-        // Em caso de falha na leitura, o servidor não deve subir.
-        process.exit(1); 
-    }
+app.use(express.json());
 
-    // Habilita CORS para permitir requisições de páginas HTML
-    app.use((req, res, next) => {
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-        next();
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'API GeoTIFF REST - TypeScript',
+        version: '1.0.0',
+        endpoints: {
+            health: '/health',
+            geotiffs: '/geotiffs',
+            tiles: '/tile/:tiffId/:z/:x/:y',
+            vari: '/vari/:tiffId/:z/:x/:y',
+        },
+        docs: 'https://github.com/alissonpef/Geotiff-Project',
     });
+});
 
-    app.get('/', (req: Request, res: Response) => {
-        res.status(200).json({ 
-            status: 'API Rodando', 
-            tiff_status: 'Carregado',
-            message: 'Rotas implementadas: /tile/:z/:x/:y, /vari/:z/:x/:y, /debug-tile',
-            pages: {
-                visualizar_debug: 'http://localhost:3001/visualizar',
-                mapa_teste: 'http://localhost:3001/mapa'
-            }
-        });
-    });
-    
-    // Rotas para servir páginas HTML
-    app.get('/visualizar', (req: Request, res: Response) => {
-        res.sendFile(path.resolve('./src/visualizar_debug.html'));
-    });
+registerRoutes(app);
 
-    app.get('/mapa', (req: Request, res: Response) => {
-        res.sendFile(path.resolve('./src/mapa_teste.html'));
-    });
-    
-    app.get('/debug-tile', handleDebugTileRequest); // <-- ROTA DE TESTE AQUI
-
-    // ROTA 1: Visualização Direta RGB
-    app.get('/tile/:z/:x/:y', handleTileRequest); 
-
-    // ROTA 2: Mapa de Calor VARI
-    app.get('/vari/:z/:x/:y', handleVariRequest); 
-
-    app.listen(PORT, () => {
-        console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-    });
-}
-
-startServer();
+app.listen(PORT, () => {
+    console.log(`🚀 GeoTIFF API running at http://localhost:${PORT}`);
+    console.log(`📂 Data directory: ${process.env.DATA_DIR || './data'}`);
+    console.log(`🌍 CORS origin: ${CORS_ORIGIN}`);
+});
