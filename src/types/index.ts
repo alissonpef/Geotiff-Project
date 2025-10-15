@@ -1,7 +1,3 @@
-/**
- * Type definitions para a aplicação
- */
-
 import type * as GeoTIFF from 'geotiff';
 
 export interface TileParams {
