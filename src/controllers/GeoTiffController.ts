@@ -1,14 +1,7 @@
-/**
- * GeoTiffController - Controller simplificado para gerenciamento de GeoTIFFs
- */
-
 import type { Request, Response } from 'express';
 import geotiffManager from '../services/GeoTiffManager.js';
 
 class GeoTiffController {
-    /**
-     * GET /geotiffs - Lista todos os GeoTIFFs disponíveis
-     */
     public async listAvailable(req: Request, res: Response): Promise<void> {
         try {
             const available = await geotiffManager.listAvailable();
@@ -18,9 +11,6 @@ class GeoTiffController {
         }
     }
 
-    /**
-     * GET /geotiffs/loaded - Lista GeoTIFFs em cache
-     */
     public async listLoaded(req: Request, res: Response): Promise<void> {
         try {
             const loaded = geotiffManager.listLoaded();
@@ -30,9 +20,6 @@ class GeoTiffController {
         }
     }
 
-    /**
-     * POST /geotiffs/load - Carrega GeoTIFF
-     */
     public async loadGeoTiff(req: Request, res: Response): Promise<void> {
         try {
             const { idOrPath } = req.body;
@@ -43,17 +30,14 @@ class GeoTiffController {
         }
     }
 
-    /**
-     * DELETE /geotiffs/:id - Remove do cache
-     */
     public async unloadGeoTiff(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
             const success = geotiffManager.unload(id);
             if (success) {
-                res.json({ success: true, message: `GeoTIFF "${id}" removido` });
+                res.json({ success: true, message: `GeoTIFF "${id}" removed` });
             } else {
-                res.status(404).json({ success: false, error: 'Não encontrado' });
+                res.status(404).json({ success: false, error: 'Not found' });
             }
         } catch (error) {
             res.status(500).json({ success: false, error: (error as Error).message });
