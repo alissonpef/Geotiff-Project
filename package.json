@@ -17,9 +17,9 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
-  "name": "project-teste",
+  "name": "project-test",
   "version": "1.0.0",
-  "description": "API REST TypeScript para servir tiles de GeoTIFF com suporte a múltiplos arquivos, cache inteligente e visualização VARI",
+  "description": "TypeScript REST API to serve GeoTIFF tiles with multi-file support, simple cache and VARI visualization",
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
