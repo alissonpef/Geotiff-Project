@@ -1,30 +1,27 @@
 import mercator from 'global-mercator';
 
 /**
- * Converte as coordenadas Z/X/Y (Web Mercator) para uma Bounding Box geográfica (WGS84).
- * @param z Nível de Zoom
- * @param x Coluna do Tile
- * @param y Linha do Tile
+ * @param z Nível de Zoom (inteiro >= 0)
+ * @param x Coluna do Tile (inteiro, 0 <= x <= 2^z - 1)
+ * @param y Linha do Tile (inteiro, 0 <= y <= 2^z - 1)
  * @returns [minLon, minLat, maxLon, maxLat] em graus WGS84.
  */
 export function getTileBBoxWGS84(z: number, x: number, y: number): [number, number, number, number] {
-    // A biblioteca 'global-mercator' converte tile [x, y, z] 
-    // para bbox [west, south, east, north] em WGS84
-    // Formato esperado pelo GeoTIFF.js: [minLon, minLat, maxLon, maxLat]
-    const bbox = mercator.tileToBBox([x, y, z]);
-    
-    const [west, south, east, north] = bbox;
-    
-    // Formato GeoTIFF.js espera: [minLon, minLat, maxLon, maxLat]
-    return [west, south, east, north]; 
+  const bbox = mercator.tileToBBox([x, y, z]);
+  const [west, south, east, north] = bbox;
+  return [west, south, east, north];
 }
 
-/**
- * Funções auxiliares para validação de parâmetros.
- */
-export function validateTileParams(z: number, x: number, y: number): boolean {
-    if (isNaN(z) || isNaN(x) || isNaN(y)) return false;
-    if (z < 0 || x < 0 || y < 0) return false;
-    // Adicionar aqui lógica para limitar o zoom se necessário (e.g., z > 22)
-    return true;
+export function tmsYToXyzY(z: number, yTms: number): number {
+  return (2 ** z - 1) - yTms;
+}
+
+export function validateTileParams(z: number, x: number, y: number, maxZoom = 22): boolean {
+  if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  if (!Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y)) return false;
+  if (z < 0 || z > maxZoom) return false;
+  const maxIndex = 2 ** z - 1;
+  if (x < 0 || x > maxIndex) return false;
+  if (y < 0 || y > maxIndex) return false;
+  return true;
 }
