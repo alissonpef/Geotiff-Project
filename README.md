@@ -26,35 +26,34 @@ REST API in TypeScript to serve 256x256 tiles from GeoTIFF files, with a simple 
 
 ```
 src/
-  index.ts                 # server bootstrap (demo routes)
-  config/                  # centralized configuration (port, directories, cache, CORS)
+  index.ts                 # server bootstrap (CORS, routes, startup)
   controllers/             # controllers for GeoTIFFs and tiles
   routes/                  # REST routes (tile, vari, geotiffs, health)
   services/                # business logic (GeoTiffManager, TileService)
   types/                   # shared types
-  utils/                   # utilities (tile bbox, VARI)
+  utils/                   # utilities (tile bbox, VARI, validation)
 data/
   odm_orthophoto.tif      # example GeoTIFF
 tests/
-  *.test.ts                # jest tests
+  core.test.ts             # focused integration tests
 ```
 
-## Endpoints principais
+## Main endpoints
 
 - Health check
-  - GET `/health`
+  - GET `/health` — returns `{ healthy: true, uptime: <seconds> }`
 
-- Gerenciamento de GeoTIFFs (`src/routes/geotiffRoutes.ts`)
+- GeoTIFF management (`src/routes/geotiffRoutes.ts`)
   - GET `/geotiffs` — list .tif/.tiff files in the data directory
   - GET `/geotiffs/loaded` — list files currently loaded in cache
   - POST `/geotiffs/load` — body: `{ idOrPath: string }` — load into cache
   - DELETE `/geotiffs/:id` — remove from cache
 
-- Tiles RGB (`src/routes/tileRoutes.ts`)
-  - GET `/tile/:tiffId/:z/:x/:y` — tile 256x256 PNG (ou outros formatos futuramente)
+ - RGB tiles (`src/routes/tileRoutes.ts`)
+  - GET `/tile/:tiffId/:z/:x/:y` — 256x256 PNG tile (other formats possible in future)
 
-- Tiles VARI (`src/routes/variRoutes.ts`)
-  - GET `/vari/:tiffId/:z/:x/:y` — tile 256x256 PNG com colormap baseado em VARI
+ - VARI tiles (`src/routes/variRoutes.ts`)
+  - GET `/vari/:tiffId/:z/:x/:y` — 256x256 PNG tile with a VARI-based colormap
 
 Notes:
 - The `tiffId` can be a filename present in `DATA_DIR` (with or without extension) or an absolute path.
@@ -65,14 +64,10 @@ Notes:
 
 Environment variables (see `.env.example`):
 
-- PORT: server port (default 3001)
-- DATA_DIR: directory where GeoTIFFs live (default `./data`)
-- MEDIA_DIR, TEMP_DIR: auxiliary directories (optional)
-- MAX_CACHE_SIZE_MB: cache size limit in MB (default 2048 in code)
-- CACHE_AGE_MINUTES: cache cleanup time in minutes (default 60)
-- TILE_SIZE: tile size (default 256)
-- MAX_ZOOM: maximum zoom supported (default 22)
-- CORS_ORIGIN: allowed origin (default `*`)
+- **PORT**: server port (default 3001)
+- **DATA_DIR**: directory where GeoTIFFs live (default `./data`)
+- **CACHE_AGE_MINUTES**: cache cleanup time in minutes (default 60)
+- **CORS_ORIGIN**: allowed origin (default `*`)
 
 Create a `.env` file at the project root to override defaults if desired.
 
@@ -128,3 +123,10 @@ npm run test:coverage
 - `TileService` reads rasters (R,G,B) for a bounding box based on Z/X/Y and generates RGB or VARI tiles, encoding them with `sharp`.
 - `tileUtils.getTileBBoxWGS84` converts Z/X/Y → [minLon, minLat, maxLon, maxLat] in WGS84 using `global-mercator`.
 - The VARI colormap maps values to RGB in a simple way: red (low) → yellow (medium) → green (high).
+
+## Limitations and known issues
+
+- **Raster band normalization**: The current `TileService` assumes 8-bit (Uint8) raster bands. GeoTIFFs with 16-bit or floating-point bands may produce incorrect images or visual artifacts. A normalization step (rescaling to 0–255) should be added for production use.
+- **Tile coordinate conventions**: The API uses XYZ tile coordinates (as returned by `global-mercator`). If your client uses TMS coordinates, you must convert Y before calling the API using `y_xyz = (2^z - 1) - y_tms`.
+- **Cache policy**: The current cache uses simple time-based expiration. For production, consider adding LRU eviction by memory size and concurrency guards to prevent duplicate loads.
+- **Synchronous file IO**: `GeoTiffManager` uses sync file operations. For high concurrency, switch to async `fs.promises`.
