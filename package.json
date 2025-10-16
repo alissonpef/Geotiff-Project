@@ -3,6 +3,7 @@
     "express": "^5.1.0",
     "geotiff": "^2.1.4-beta.0",
     "global-mercator": "^3.1.0",
+    "proj4": "^2.19.10",
     "sharp": "^0.34.4"
   },
   "devDependencies": {
@@ -25,12 +26,19 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test-tile": "node ./scripts/test-tile.js"
   },
-  "keywords": ["geotiff", "tiles", "vari", "typescript", "express", "rest-api", "maps"],
+  "keywords": [
+    "geotiff",
+    "tiles",
+    "vari",
+    "typescript",
+    "express",
+    "rest-api",
+    "maps"
+  ],
   "author": "GlobalDrones",
   "license": "ISC"
 }
