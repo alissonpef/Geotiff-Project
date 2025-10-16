@@ -7,6 +7,8 @@ class TileController {
     public async getTile(req: Request, res: Response): Promise<void> {
         try {
             const { tiffId, z, x, y } = req.params;
+            const { size } = req.query;
+            
             const params: TileParams = {
                 z: parseInt(z, 10),
                 x: parseInt(x, 10),
@@ -18,7 +20,8 @@ class TileController {
                 return;
             }
 
-            const pngBuffer = await tileService.generateRgbTile(tiffId, params);
+            const options = size ? { size: parseInt(size as string, 10) } : undefined;
+            const pngBuffer = await tileService.generateRgbTile(tiffId, params, options);
             res.contentType('image/png').send(pngBuffer);
         } catch (error) {
             res.status(500).send(`Error: ${(error as Error).message}`);
@@ -28,6 +31,8 @@ class TileController {
     public async getVariTile(req: Request, res: Response): Promise<void> {
         try {
             const { tiffId, z, x, y } = req.params;
+            const { size } = req.query;
+            
             const params: TileParams = {
                 z: parseInt(z, 10),
                 x: parseInt(x, 10),
@@ -39,7 +44,8 @@ class TileController {
                 return;
             }
 
-            const pngBuffer = await tileService.generateVariTile(tiffId, params);
+            const options = size ? { size: parseInt(size as string, 10) } : undefined;
+            const pngBuffer = await tileService.generateVariTile(tiffId, params, options);
             res.contentType('image/png').send(pngBuffer);
         } catch (error) {
             res.status(500).send(`Error: ${(error as Error).message}`);
