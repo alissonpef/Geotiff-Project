@@ -51,4 +51,5 @@ export interface VariOptions {
 export interface TileOptions {
     format?: 'png' | 'jpeg' | 'webp';
     quality?: number;
+    size?: number;
 }
