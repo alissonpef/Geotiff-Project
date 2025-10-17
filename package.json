@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "chroma-js": "^3.1.2",
     "express": "^5.1.0",
     "geotiff": "^2.1.4-beta.0",
     "global-mercator": "^3.1.0",
@@ -7,6 +8,7 @@
     "sharp": "^0.34.4"
   },
   "devDependencies": {
+    "@types/chroma-js": "^3.1.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.7.2",
@@ -28,7 +30,6 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "jest",
-    "test:watch": "jest --watch",
     "test-tile": "node ./scripts/test-tile.js",
     "test-spectral": "node ./scripts/test-spectral-indices.js"
   },
