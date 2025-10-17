@@ -396,7 +396,7 @@ flowchart TD
     C -->|Não| D[Retorna 400 Bad Request]
     C -->|Sim| E[SpectralIndexController]
     
-    E --> F[Determina equação<br/>indexName=NDVI → '(nir-red)/(nir+red)']
+    E --> F[Determina equação<br/>indexName=NDVI: nir minus red over nir plus red]
     
     F --> G[TileService.generateSpectralIndexTile]
     
@@ -443,8 +443,8 @@ flowchart LR
     
     subgraph "Processamento"
         B[Loop: 262,144 pixels]
-        C[Pixel[0]: R=120, G=150, B=80, NIR=200]
-        D[Aplica equação:<br/>'(nir - red) / (nir + red)']
+        C[Pixel 0: R=120, G=150, B=80, NIR=200]
+    D[Aplica equação: NDVI = nir minus red over nir plus red]
         E[Resultado: 0.25]
     end
     
@@ -517,7 +517,7 @@ graph LR
     E --> H[Pixel Window<br/>minX: 1234, maxX: 1490<br/>minY: 5678, maxY: 5934]
     G --> H
     
-    H --> I[Leitura de Rasters<br/>window=[1234, 5678, 1490, 5934]]
+    H --> I[Leitura de Rasters<br/>window: 1234, 5678, 1490, 5934]
     
     style A fill:#E3F2FD
     style I fill:#C8E6C9
