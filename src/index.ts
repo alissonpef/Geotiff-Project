@@ -1,39 +1,38 @@
 import express from 'express';
-import { registerRoutes } from './routes/index.js';
+import dotenv from 'dotenv';
+import tileRoutes from './routes/tileRoutes.js';
+import variRoutes from './routes/variRoutes.js';
+import spectralIndexRoutes from './routes/spectralIndexRoutes.js';
 
-const PORT = parseInt(process.env.PORT || '3001', 10);
-const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+dotenv.config();
 
 const app = express();
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const DEFAULT_GEOTIFF = process.env.DEFAULT_GEOTIFF || 'odm_orthophoto.tif';
 
+// CORS simples
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
 });
 
 app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.json({
-        success: true,
-        message: 'API GeoTIFF REST - TypeScript',
-        version: '1.0.0',
-        endpoints: {
-            health: '/health',
-            geotiffs: '/geotiffs',
-            tiles: '/tile/:tiffId/:z/:x/:y',
-            vari: '/vari/:tiffId/:z/:x/:y',
-        },
-        docs: 'https://github.com/alissonpef/Geotiff-Project',
-    });
+app.use('/tile', tileRoutes);
+app.use('/vari', variRoutes);
+app.use('/index', spectralIndexRoutes);
+
+app.get('/health', (_req, res) => {
+    res.json({ healthy: true, uptime: process.uptime() });
 });
 
-registerRoutes(app);
-
 app.listen(PORT, () => {
-    console.log(`🚀 GeoTIFF API running at http://localhost:${PORT}`);
-    console.log(`📂 Data directory: ${process.env.DATA_DIR || './data'}`);
-    console.log(`🌍 CORS origin: ${CORS_ORIGIN}`);
+    console.log(`🚀 GeoTIFF Tile Server - http://localhost:${PORT}`);
+    console.log(`� Default file: ${DEFAULT_GEOTIFF}`);
+    console.log(`\n� Routes:`);
+    console.log(`   GET /tile/:z/:x/:y`);
+    console.log(`   GET /vari/:z/:x/:y`);
+    console.log(`   GET /index/:z/:x/:y?indexName=NDVI`);
 });
