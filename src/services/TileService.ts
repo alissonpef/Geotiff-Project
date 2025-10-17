@@ -2,7 +2,10 @@ import sharp from 'sharp';
 import proj4 from 'proj4';
 import geoTiffManager from './GeoTiffManager.js';
 import { getTileBBoxWGS84, autoCorrectZoom } from '../utils/tileUtils.js';
-import type { TileParams, TileOptions } from '../types/index.js';
+import { extractBandMetadata } from '../utils/bandMetadata.js';
+import { calculateSpectralIndex, getIndexDefinition } from '../utils/spectralIndices.js';
+import { applyColorMap, applyColorMapWithPercentiles, getRecommendedColorMap, type ColorMapName } from '../utils/colorMaps.js';
+import type { TileParams, TileOptions, SpectralIndexOptions } from '../types/index.js';
 import type * as GeoTIFF from 'geotiff';
 
 class TileService {
@@ -238,6 +241,106 @@ class TileService {
         }
 
         return [r, g, b];
+    }
+
+    public async generateSpectralIndexTile(
+        tiffId: string,
+        params: TileParams,
+        options: SpectralIndexOptions
+    ): Promise<Buffer> {
+        let { z, x, y } = params;
+        const tileSize = options?.size || TileService.DEFAULT_TILE_SIZE;
+
+        const entry = await geoTiffManager.loadGeoTiff(tiffId);
+        const { image } = entry;
+
+        const bandMetadata = await extractBandMetadata(image);
+        console.log(`[TileService] Detected bands for ${tiffId}:`, bandMetadata.bandNames);
+
+        let equation = options.equation;
+        let colormap = options.colormap;
+
+        if (!equation && options.indexName) {
+            const indexDef = getIndexDefinition(options.indexName);
+            if (!indexDef) {
+                throw new Error(`Unknown spectral index: ${options.indexName}`);
+            }
+            equation = indexDef.equation;
+            
+            if (!colormap) {
+                colormap = getRecommendedColorMap(options.indexName);
+            }
+            
+            console.log(`[TileService] Using predefined index ${options.indexName}: ${equation}`);
+        }
+
+        if (!equation) {
+            throw new Error('Either equation or indexName must be provided');
+        }
+
+        const geotiffBBoxWGS84 = this.getGeoTiffBBoxWGS84(image);
+        const { zoom: correctedZoom, corrected } = autoCorrectZoom(x, y, z, geotiffBBoxWGS84);
+        if (corrected) {
+            z = correctedZoom;
+            console.log(`[TileService] Using corrected zoom ${z} for index tile (original: ${params.z})`);
+        }
+
+        const bboxWGS84 = getTileBBoxWGS84(z, x, y);
+        const bbox = this.reprojectBBox(bboxWGS84, image);
+        const window = this.bboxToWindow(bbox, image);
+        
+        if (!window) {
+            return this.createTransparentTile(tileSize);
+        }
+
+        const [windowMinX, windowMinY, windowMaxX, windowMaxY] = window;
+        const windowWidth = windowMaxX - windowMinX;
+        const windowHeight = windowMaxY - windowMinY;
+
+        const bandCount = bandMetadata.bandCount;
+        const samples = Array.from({ length: bandCount }, (_, i) => i);
+        
+        const rasters = await image.readRasters({
+            window: window,
+            samples: samples,
+            interleave: false,
+        });
+
+        const bandData: Float32Array[] = [];
+        for (let i = 0; i < bandCount; i++) {
+            const raster = rasters[i] as Uint8Array | Uint16Array | Float32Array;
+            if (raster instanceof Float32Array) {
+                bandData.push(raster);
+            } else {
+                bandData.push(new Float32Array(raster));
+            }
+        }
+
+        console.log(`[TileService] Calculating spectral index with equation: ${equation}`);
+        const indexResult = calculateSpectralIndex(
+            equation,
+            bandData,
+            bandMetadata,
+            windowWidth,
+            windowHeight
+        );
+
+        console.log(`[TileService] Index result - min: ${indexResult.min.toFixed(3)}, max: ${indexResult.max.toFixed(3)}, mean: ${indexResult.mean.toFixed(3)}`);
+
+        const colormapName = (colormap || 'viridis') as ColorMapName;
+        let pixelBuffer: Buffer;
+
+        if (options.percentiles) {
+            const [minP, maxP] = options.percentiles;
+            pixelBuffer = applyColorMapWithPercentiles(indexResult.data, colormapName, minP, maxP);
+        } else if (options.rescale) {
+            const [min, max] = options.rescale;
+            pixelBuffer = applyColorMap(indexResult.data, min, max, colormapName);
+        } else {
+            pixelBuffer = applyColorMap(indexResult.data, indexResult.min, indexResult.max, colormapName);
+        }
+
+        return this.encodeImage(pixelBuffer, windowWidth, windowHeight, tileSize, options);
     }
 
     private async encodeImage(
