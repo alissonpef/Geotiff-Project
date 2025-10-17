@@ -14,14 +14,13 @@ const tileParams = {
     size: parseInt(process.env.TEST_SIZE || '512', 10)
 };
 
-const url = `/tile/${tileParams.tiffId}/${tileParams.z}/${tileParams.x}/${tileParams.y}?size=${tileParams.size}`;
-const filename = `tile-z${tileParams.z}-x${tileParams.x}-y${tileParams.y}.png`;
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const projectRoot = path.resolve(scriptDir, '..');
 const outDir = path.join(projectRoot, 'img');
 fs.mkdirSync(outDir, { recursive: true });
-const outPath = path.join(outDir, filename);
+
+console.log('🎨 Teste de Tiles RGB e VARI\n');
 
 console.log('📍 Tile parameters:');
 console.log(`   Zoom: ${tileParams.z}`);
@@ -29,56 +28,92 @@ console.log(`   X: ${tileParams.x}`);
 console.log(`   Y: ${tileParams.y}`);
 console.log(`   Size: ${tileParams.size}x${tileParams.size}\n`);
 
-console.log('🔗 Local service URL:');
-console.log(`   http://localhost:3001${url}\n`);
+async function fetchTile(endpoint, filename, description) {
+    const url = `/${endpoint}/${tileParams.tiffId}/${tileParams.z}/${tileParams.x}/${tileParams.y}?size=${tileParams.size}`;
+    const outPath = path.join(outDir, filename);
 
-const options = {
-    hostname: 'localhost',
-    port: 3001,
-    path: url,
-    method: 'GET',
-    timeout: 120000
-};
+    console.log(`📊 Gerando: ${description}`);
+    console.log(`   URL: http://localhost:3001${url}`);
 
-const req = http.request(options, (res) => {
-    console.log(`📡 Status: ${res.statusCode}`);
-    console.log(`📋 Content-Type: ${res.headers['content-type']}`);
-    
-    if (res.statusCode === 200) {
-        const chunks = [];
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'localhost',
+            port: 3001,
+            path: url,
+            method: 'GET',
+            timeout: 120000
+        };
+
+        const req = http.request(options, (res) => {
+            if (res.statusCode === 200) {
+                const chunks = [];
+                
+                res.on('data', (chunk) => {
+                    chunks.push(chunk);
+                });
+                
+                res.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    fs.writeFileSync(outPath, buffer);
+                    
+                    console.log(`   ✅ Sucesso! Arquivo: ${outPath}`);
+                    console.log(`   📊 Tamanho: ${buffer.length} bytes\n`);
+                    resolve();
+                });
+            } else {
+                let data = '';
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                res.on('end', () => {
+                    console.log(`   ❌ Erro (${res.statusCode}):`);
+                    console.log(`   ${data}\n`);
+                    reject(new Error(`HTTP ${res.statusCode}`));
+                });
+            }
+        });
+
+        req.on('error', (e) => {
+            console.error(`   ❌ Erro de requisição: ${e.message}\n`);
+            reject(e);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            console.error('   ❌ Timeout\n');
+            reject(new Error('Timeout'));
+        });
+
+        req.end();
+    });
+}
+
+async function runTests() {
+    try {
+        const tests = [
+            {
+                endpoint: 'tile',
+                filename: `tile-rgb-z${tileParams.z}-x${tileParams.x}-y${tileParams.y}.png`,
+                description: 'Tile RGB'
+            },
+            {
+                endpoint: 'vari',
+                filename: `tile-vari-z${tileParams.z}-x${tileParams.x}-y${tileParams.y}.png`,
+                description: 'Tile VARI (Vegetation Index)'
+            }
+        ];
+
+        for (const test of tests) {
+            await fetchTile(test.endpoint, test.filename, test.description);
+        }
+
+        console.log('🎉 Todos os tiles gerados com sucesso!');
+        console.log(`📁 Arquivos salvos em: ${outDir}`);
         
-        res.on('data', (chunk) => {
-            chunks.push(chunk);
-        });
-        
-        res.on('end', () => {
-            const buffer = Buffer.concat(chunks);
-            fs.writeFileSync(outPath, buffer);
-            
-            console.log(`\n✅ Tile generated successfully!`);
-            console.log(`📁 File: ${outPath}`);
-            console.log(`📊 Size: ${buffer.length} bytes`);
-            console.log(`📐 Dimensions: ${tileParams.size}x${tileParams.size} pixels`);
-        });
-    } else {
-        let data = '';
-        res.on('data', (chunk) => {
-            data += chunk;
-        });
-        res.on('end', () => {
-            console.log(`\n❌ Error response:`);
-            console.log(data);
-        });
+    } catch (error) {
+        console.error('❌ Erro durante execução dos testes:', error.message);
+        process.exit(1);
     }
-});
+}
 
-req.on('error', (e) => {
-    console.error(`\n❌ Request error: ${e.message}`);
-});
-
-req.on('timeout', () => {
-    req.destroy();
-    console.error('\n❌ Request timeout');
-});
-
-req.end();
+runTests();

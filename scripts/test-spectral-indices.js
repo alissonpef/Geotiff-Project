@@ -6,55 +6,35 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const tileParams = {
+    tiffId: process.env.TEST_TIFFID || process.env.DEFAULT_GEOTIFF || 'odm_orthophoto_multi',
+    z: parseInt(process.env.TEST_Z || '21', 10),
+    x: parseInt(process.env.TEST_X || '381005', 10),
+    y: parseInt(process.env.TEST_Y || '585528', 10),
+    size: parseInt(process.env.TEST_SIZE || '512', 10)
+};
+
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const projectRoot = path.resolve(scriptDir, '..');
 const outDir = path.join(projectRoot, 'img');
 fs.mkdirSync(outDir, { recursive: true });
 
-console.log('🌿 Teste de Índices Espectrais Multiespectrais\n');
+console.log('🌿 Teste de Arquivo Multiespectral\n');
 
-const tileParams = {
-    tiffId: process.env.TEST_TIFFID || process.env.DEFAULT_GEOTIFF || 'odm_orthophoto',
-    z: parseInt(process.env.TEST_Z || '20', 10),
-    x: parseInt(process.env.TEST_X || '381004', 10),
-    y: parseInt(process.env.TEST_Y || '585533', 10),
-    size: parseInt(process.env.TEST_SIZE || '512', 10)
-};
+console.log('📍 Tile parameters:');
+console.log(`   Arquivo: ${tileParams.tiffId}`);
+console.log(`   Zoom: ${tileParams.z}`);
+console.log(`   X: ${tileParams.x}`);
+console.log(`   Y: ${tileParams.y}`);
+console.log(`   Size: ${tileParams.size}x${tileParams.size}\n`);
 
-const tests = [
-    {
-        name: 'NDVI',
-        description: 'Normalized Difference Vegetation Index',
-        query: `indexName=NDVI&size=${tileParams.size}`,
-        filename: 'ndvi.png'
-    },
-    {
-        name: 'EVI',
-        description: 'Enhanced Vegetation Index',
-        query: `indexName=EVI&size=${tileParams.size}&colormap=RdYlGn`,
-        filename: 'evi.png'
-    },
-    {
-        name: 'NDWI',
-        description: 'Normalized Difference Water Index',
-        query: `indexName=NDWI&size=${tileParams.size}&colormap=RdYlBu`,
-        filename: 'ndwi.png'
-    },
-    {
-        name: 'Custom',
-        description: 'Equação customizada: (green - red) / (green + red)',
-        query: `equation=(green-red)/(green%2Bred)&size=${tileParams.size}&colormap=viridis`,
-        filename: 'custom_equation.png'
-    },
-];
+async function fetchTile(endpoint, filename, description, query = '') {
+    const queryString = query ? `?${query}` : `?size=${tileParams.size}`;
+    const url = `/${endpoint}/${tileParams.tiffId}/${tileParams.z}/${tileParams.x}/${tileParams.y}${queryString}`;
+    const outPath = path.join(outDir, filename);
 
-async function testIndex(test) {
-    const url = `/index/${tileParams.tiffId}/${tileParams.z}/${tileParams.x}/${tileParams.y}?${test.query}`;
-    const outPath = path.join(outDir, test.filename);
-
-    console.log(`📊 Testando: ${test.name}`);
-    console.log(`   Descrição: ${test.description}`);
+    console.log(`📊 Gerando: ${description}`);
     console.log(`   URL: http://localhost:3001${url}`);
 
     return new Promise((resolve, reject) => {
@@ -110,56 +90,28 @@ async function testIndex(test) {
     });
 }
 
-async function testListIndices() {
-    console.log('📋 Listando índices disponíveis...\n');
-    
-    return new Promise((resolve, reject) => {
-        const options = {
-            hostname: 'localhost',
-            port: 3001,
-            path: '/index/list',
-            method: 'GET',
-            timeout: 30000
-        };
-
-        const req = http.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => {
-                if (res.statusCode === 200) {
-                    const result = JSON.parse(data);
-                    console.log(`   ✅ Total de índices: ${result.data.count}`);
-                    result.data.indices.forEach(idx => {
-                        console.log(`   • ${idx.name}: ${idx.equation}`);
-                    });
-                    console.log('');
-                    resolve();
-                } else {
-                    console.log(`   ❌ Erro: ${res.statusCode}\n`);
-                    reject(new Error(`HTTP ${res.statusCode}`));
-                }
-            });
-        });
-
-        req.on('error', reject);
-        req.on('timeout', () => {
-            req.destroy();
-            reject(new Error('Timeout'));
-        });
-
-        req.end();
-    });
-}
-
 async function runTests() {
     try {
-        await testListIndices();
+        const tests = [
+            {
+                endpoint: 'tile',
+                filename: `tile-multi-rgb-z${tileParams.z}-x${tileParams.x}-y${tileParams.y}.png`,
+                description: 'Tile RGB Multiespectral',
+                query: `size=${tileParams.size}`
+            },
+            {
+                endpoint: 'index',
+                filename: 'ndvi.png',
+                description: 'NDVI (Normalized Difference Vegetation Index)',
+                query: `indexName=NDVI&size=${tileParams.size}&colormap=RdYlGn`
+            }
+        ];
 
         for (const test of tests) {
-            await testIndex(test);
+            await fetchTile(test.endpoint, test.filename, test.description, test.query);
         }
 
-        console.log('🎉 Todos os testes concluídos!');
+        console.log('🎉 Todos os tiles gerados com sucesso!');
         console.log(`📁 Arquivos salvos em: ${outDir}`);
         
     } catch (error) {
