@@ -2,10 +2,12 @@ import type { Express } from 'express';
 import tileRoutes from './tileRoutes.js';
 import variRoutes from './variRoutes.js';
 import geotiffRoutes from './geotiffRoutes.js';
+import spectralIndexRoutes from './spectralIndexRoutes.js';
 
 export function registerRoutes(app: Express): void {
     app.use('/tile', tileRoutes);
     app.use('/vari', variRoutes);
+    app.use('/index', spectralIndexRoutes);
     app.use('/geotiffs', geotiffRoutes);
 
     app.get('/health', (req, res) => {

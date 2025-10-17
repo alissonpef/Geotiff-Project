@@ -3,6 +3,11 @@ import tileController from '../controllers/TileController.js';
 
 const router = Router();
 
+router.get('/:z/:x/:y', (req, res) => {
+    (req.params as any).tiffId = 'default';
+    tileController.getTile(req, res);
+});
+
 router.get('/:tiffId/:z/:x/:y', (req, res) => tileController.getTile(req, res));
 
 export default router;
