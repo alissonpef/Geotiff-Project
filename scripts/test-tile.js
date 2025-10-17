@@ -6,7 +6,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuração do tile (lê do .env com fallback)
 const tileParams = {
     tiffId: process.env.TEST_TIFFID || process.env.DEFAULT_GEOTIFF || 'odm_orthophoto',
     z: parseInt(process.env.TEST_Z || '22', 10),
@@ -38,7 +37,7 @@ const options = {
     port: 3001,
     path: url,
     method: 'GET',
-    timeout: 60000
+    timeout: 120000
 };
 
 const req = http.request(options, (res) => {

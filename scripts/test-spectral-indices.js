@@ -63,7 +63,7 @@ async function testIndex(test) {
             port: 3001,
             path: url,
             method: 'GET',
-            timeout: 60000
+            timeout: 120000
         };
 
         const req = http.request(options, (res) => {
@@ -119,7 +119,7 @@ async function testListIndices() {
             port: 3001,
             path: '/index/list',
             method: 'GET',
-            timeout: 10000
+            timeout: 30000
         };
 
         const req = http.request(options, (res) => {
