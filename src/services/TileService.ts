@@ -4,7 +4,7 @@ import geoTiffManager from './GeoTiffManager.js';
 import { getTileBBoxWGS84, autoCorrectZoom } from '../utils/tileUtils.js';
 import { extractBandMetadata } from '../utils/bandMetadata.js';
 import { calculateSpectralIndex, getIndexDefinition } from '../utils/spectralIndices.js';
-import { applyColorMap, applyColorMapWithPercentiles, getRecommendedColorMap, type ColorMapName } from '../utils/colorMaps.js';
+import { applyColorMapWithRange, getRecommendedColorMap, type ColorMapName } from '../utils/colorMaps.js';
 import type { TileParams, TileOptions, SpectralIndexOptions } from '../types/index.js';
 import type * as GeoTIFF from 'geotiff';
 
@@ -103,7 +103,6 @@ class TileService {
         const { zoom: correctedZoom, corrected } = autoCorrectZoom(x, y, z, geotiffBBoxWGS84);
         if (corrected) {
             z = correctedZoom;
-            console.log(`[TileService] Using corrected zoom ${z} for tile request (original: ${params.z})`);
         }
 
         const bboxWGS84 = getTileBBoxWGS84(z, x, y);
@@ -155,7 +154,6 @@ class TileService {
         const { zoom: correctedZoom, corrected } = autoCorrectZoom(x, y, z, geotiffBBoxWGS84);
         if (corrected) {
             z = correctedZoom;
-            console.log(`[TileService] Using corrected zoom ${z} for VARI tile request (original: ${params.z})`);
         }
 
         const bboxWGS84 = getTileBBoxWGS84(z, x, y);
@@ -255,7 +253,6 @@ class TileService {
         const { image } = entry;
 
         const bandMetadata = await extractBandMetadata(image);
-        console.log(`[TileService] Detected bands for ${tiffId}:`, bandMetadata.bandNames);
 
         let equation = options.equation;
         let colormap = options.colormap;
@@ -271,7 +268,6 @@ class TileService {
                 colormap = getRecommendedColorMap(options.indexName);
             }
             
-            console.log(`[TileService] Using predefined index ${options.indexName}: ${equation}`);
         }
 
         if (!equation) {
@@ -282,7 +278,6 @@ class TileService {
         const { zoom: correctedZoom, corrected } = autoCorrectZoom(x, y, z, geotiffBBoxWGS84);
         if (corrected) {
             z = correctedZoom;
-            console.log(`[TileService] Using corrected zoom ${z} for index tile (original: ${params.z})`);
         }
 
         const bboxWGS84 = getTileBBoxWGS84(z, x, y);
@@ -316,7 +311,6 @@ class TileService {
             }
         }
 
-        console.log(`[TileService] Calculating spectral index with equation: ${equation}`);
         const indexResult = calculateSpectralIndex(
             equation,
             bandData,
@@ -325,22 +319,33 @@ class TileService {
             windowHeight
         );
 
-        console.log(`[TileService] Index result - min: ${indexResult.min.toFixed(3)}, max: ${indexResult.max.toFixed(3)}, mean: ${indexResult.mean.toFixed(3)}`);
-
         const colormapName = (colormap || 'viridis') as ColorMapName;
-        let pixelBuffer: Buffer;
+        let pixelBuffer: Uint8Array;
+        let rangeMin: number, rangeMax: number;
 
-        if (options.percentiles) {
-            const [minP, maxP] = options.percentiles;
-            pixelBuffer = applyColorMapWithPercentiles(indexResult.data, colormapName, minP, maxP);
-        } else if (options.rescale) {
-            const [min, max] = options.rescale;
-            pixelBuffer = applyColorMap(indexResult.data, min, max, colormapName);
+        // Determine optimal range for colormap
+        if (options.rescale) {
+            // User specified manual range
+            [rangeMin, rangeMax] = options.rescale;
+        } else if (options.indexName) {
+            // Use predefined range from index definition (recommended)
+            const indexDef = getIndexDefinition(options.indexName);
+            if (indexDef && indexDef.range) {
+                [rangeMin, rangeMax] = indexDef.range;
+            } else {
+                rangeMin = indexResult.min;
+                rangeMax = indexResult.max;
+            }
         } else {
-            pixelBuffer = applyColorMap(indexResult.data, indexResult.min, indexResult.max, colormapName);
+            // Fallback: use actual data range
+            rangeMin = indexResult.min;
+            rangeMax = indexResult.max;
         }
 
-        return this.encodeImage(pixelBuffer, windowWidth, windowHeight, tileSize, options);
+        // Apply colormap with optimized LUT (fast!)
+        pixelBuffer = applyColorMapWithRange(indexResult.data, colormapName, rangeMin, rangeMax);
+
+        return this.encodeImage(Buffer.from(pixelBuffer), windowWidth, windowHeight, tileSize, options);
     }
 
     private async encodeImage(
