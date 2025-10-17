@@ -11,6 +11,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.7.2",
     "@types/supertest": "^6.0.3",
+    "dotenv": "^17.2.3",
     "jest": "^30.2.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
@@ -28,7 +29,8 @@
     "dev": "tsx watch src/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test-tile": "node ./scripts/test-tile.js"
+    "test-tile": "node ./scripts/test-tile.js",
+    "test-spectral": "node ./scripts/test-spectral-indices.js"
   },
   "keywords": [
     "geotiff",
