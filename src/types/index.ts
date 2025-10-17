@@ -49,6 +49,21 @@ export interface VariOptions {
 }
 
 export interface TileOptions {
+    size?: number;
+    format?: 'png' | 'jpeg' | 'webp';
+    quality?: number;
+}
+
+export interface SpectralIndexOptions extends TileOptions {
+    equation?: string;           
+    indexName?: string;    
+    colormap?: string;           
+    rescale?: [number, number]; 
+    percentiles?: [number, number];
+}
+
+
+export interface TileOptions {
     format?: 'png' | 'jpeg' | 'webp';
     quality?: number;
     size?: number;
