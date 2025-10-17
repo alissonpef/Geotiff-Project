@@ -2,13 +2,17 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+// Configuração do tile (lê do .env com fallback)
 const tileParams = {
-    tiffId: 'odm_orthophoto',
-    z: 22,    
-    x: 762005,     
-    y: 1171062,    
-    size: 512
+    tiffId: process.env.TEST_TIFFID || process.env.DEFAULT_GEOTIFF || 'odm_orthophoto',
+    z: parseInt(process.env.TEST_Z || '22', 10),
+    x: parseInt(process.env.TEST_X || '762005', 10),
+    y: parseInt(process.env.TEST_Y || '1171062', 10),
+    size: parseInt(process.env.TEST_SIZE || '512', 10)
 };
 
 const url = `/tile/${tileParams.tiffId}/${tileParams.z}/${tileParams.x}/${tileParams.y}?size=${tileParams.size}`;
