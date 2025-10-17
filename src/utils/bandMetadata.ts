@@ -54,7 +54,6 @@ export async function extractBandMetadata(image: GeoTIFF.GeoTIFFImage): Promise<
         });
     }
 
-    console.log(`[BandMetadata] Detected ${bandCount} bands:`, bandNames);
 
     return {
         bands,
@@ -68,25 +67,39 @@ function parseGDALMetadata(metadata: string, bandCount: number): string[] {
     const bandNames: string[] = [];
     
     try {
-        const bandRegex = /<Item name="Band_(\d+)"[^>]*>([^<]+)<\/Item>/gi;
+        const descRegex = /<Item name="DESCRIPTION" sample="(\d+)"[^>]*>([^<]+)<\/Item>/gi;
         let match;
         
-        while ((match = bandRegex.exec(metadata)) !== null) {
-            const bandNum = parseInt(match[1], 10) - 1;
+        while ((match = descRegex.exec(metadata)) !== null) {
+            const bandNum = parseInt(match[1], 10);
             const bandName = match[2].trim();
             if (bandNum < bandCount) {
                 bandNames[bandNum] = bandName;
             }
         }
-
-        const nameRegex = /<Item name="BAND_NAME">([^<]+)<\/Item>/gi;
-        const names = [];
-        while ((match = nameRegex.exec(metadata)) !== null) {
-            names.push(match[1].trim());
-        }
         
-        if (names.length > 0) {
-            return names.slice(0, bandCount);
+        if (bandNames.length === 0 || bandNames.filter(Boolean).length === 0) {
+            const bandRegex = /<Item name="Band_(\d+)"[^>]*>([^<]+)<\/Item>/gi;
+            
+            while ((match = bandRegex.exec(metadata)) !== null) {
+                const bandNum = parseInt(match[1], 10) - 1;
+                const bandName = match[2].trim();
+                if (bandNum < bandCount) {
+                    bandNames[bandNum] = bandName;
+                }
+            }
+        }
+
+        if (bandNames.length === 0 || bandNames.filter(Boolean).length === 0) {
+            const nameRegex = /<Item name="BAND_NAME">([^<]+)<\/Item>/gi;
+            const names = [];
+            while ((match = nameRegex.exec(metadata)) !== null) {
+                names.push(match[1].trim());
+            }
+            
+            if (names.length > 0) {
+                return names.slice(0, bandCount);
+            }
         }
     } catch (error) {
         console.warn('[BandMetadata] Error parsing GDAL metadata:', error);

@@ -85,6 +85,7 @@ export interface SpectralIndexDefinition {
     equation: string;
     description: string;
     range: [number, number];
+    visualRange?: [number, number]; // Range otimizado para visualização (P2-P98)
     requiredBands: string[];
     reference?: string;
 }
@@ -95,6 +96,7 @@ export const SPECTRAL_INDICES: Record<string, SpectralIndexDefinition> = {
         equation: '(nir - red) / (nir + red)',
         description: 'Índice de vegetação mais comum, varia de -1 a 1',
         range: [-1, 1],
+        visualRange: [0.2, 0.9], // Range típico para áreas vegetadas (melhor contraste)
         requiredBands: ['nir', 'red'],
         reference: 'Tucker (1979)',
     },
